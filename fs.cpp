@@ -39,14 +39,14 @@ static int gridfs_getattr(const char *path, struct stat *stbuf)
     memset(stbuf, 0, sizeof(struct stat));
 
     if(strcmp(path, "/") == 0) {
-        stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_mode = S_IFDIR | 0555;
         stbuf->st_nlink = 2;
     } else {
         GridFile file = gf->findFile(path);
         if(!file.exists()) {
             return -ENOENT;
         }
-        stbuf->st_mode = S_IFREG | 0444;
+        stbuf->st_mode = S_IFREG | 0555;
         stbuf->st_nlink = 1;
         stbuf->st_size = file.getContentLength();
     }
