@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <fuse.h>
+#include <fuse/fuse_opt.h>
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
@@ -114,6 +115,29 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
     return len;
 }
 
+struct options {
+    char* host;
+    char* db;
+} options;
+
+#define GRIDFS_OPT_KEY(t, p, v) { t, offsetof(struct options, p), v }
+
+enum {
+    KEY_VERSION,
+    KEY_HELP
+};
+
+static struct fuse_opt gridfs_opts[] =
+{
+    GRIDFS_OPT_KEY("--host=%s", host, 0),
+    GRIDFS_OPT_KEY("--db=%s", db, 0),
+    FUSE_OPT_KEY("-V", KEY_VERSION),
+    FUSE_OPT_KEY("--version", KEY_VERSION),
+    FUSE_OPT_KEY("-h", KEY_HELP),
+    FUSE_OPT_KEY("--help", KEY_HELP),
+    NULL
+};
+
 int main(int argc, char *argv[])
 {
     gridfs_oper.getattr = gridfs_getattr;
@@ -121,8 +145,22 @@ int main(int argc, char *argv[])
     gridfs_oper.open = gridfs_open;
     gridfs_oper.read = gridfs_read;
 
-    c.connect("localhost");
-    gf = new GridFS(c, argv[1]);
+    struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
-    return fuse_main(argc, argv, &gridfs_oper, NULL);
+    memset(&options, 0, sizeof(struct options));
+    if(fuse_opt_parse(&args, &options, gridfs_opts, NULL) == -1) {
+        return -1;
+    }
+
+    if(!options.host) {
+        options.host = "localhost";
+    }
+    if(!options.db) {
+        options.db = "test";
+    }
+
+    c.connect(options.host);
+    gf = new GridFS(c, options.db);
+
+    return fuse_main(args.argc, args.argv, &gridfs_oper, NULL);
 }
