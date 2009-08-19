@@ -34,6 +34,10 @@ static struct fuse_operations gridfs_oper;
 DBClientConnection c;
 GridFS *gf;
 
+time_t mongo_time_to_unix_time(unsigned long long mtime) {
+    return mtime / 1000;
+}
+
 static int gridfs_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
@@ -50,6 +54,10 @@ static int gridfs_getattr(const char *path, struct stat *stbuf)
         stbuf->st_mode = S_IFREG | 0555;
         stbuf->st_nlink = 1;
         stbuf->st_size = file.getContentLength();
+
+        time_t upload_time = mongo_time_to_unix_time(file.getUploadDate());
+        stbuf->st_ctime = upload_time;
+        stbuf->st_mtime = upload_time;
     }
 
     return 0;
