@@ -139,10 +139,15 @@ static int gridfs_listxattr(const char* path, char* list, size_t size)
     set<string> field_set;
     metadata.getFieldNames(field_set);
     for(set<string>::const_iterator s = field_set.begin(); s != field_set.end(); s++) {
-        int field_len = s->size() + 1;
+#ifdef __linux__
+        string attr_name = "user." + *s;
+#else
+        string attr_name = *s;
+#endif
+        int field_len = attr_name.size() + 1;
         len += field_len;
         if(size >= len) {
-            memcpy(list, s->c_str(), field_len);
+            memcpy(list, attr_name.c_str(), field_len);
             list += field_len;
         }
     }
@@ -158,6 +163,18 @@ static int gridfs_listxattr(const char* path, char* list, size_t size)
 
 static int gridfs_getxattr(const char* path, const char* name, char* value, size_t size)
 {
+    const char* attr_name;
+
+#ifdef __linux__
+    if(strstr(name, "user.") == name) {
+        attr_name = name + 5;
+    } else {
+        return -ENOATTR;
+    }
+#else
+    attr_name = name;
+#endif
+
     GridFile file = gf->findFile(path);
     if(!file.exists()) {
         return -ENOENT;
@@ -168,7 +185,7 @@ static int gridfs_getxattr(const char* path, const char* name, char* value, size
         return -ENOATTR;
     }
 
-    BSONElement field = metadata[name];
+    BSONElement field = metadata[attr_name];
     if(field.eoo()) {
         return -ENOATTR;
     }
