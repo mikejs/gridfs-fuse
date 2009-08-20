@@ -123,6 +123,51 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
     return len;
 }
 
+static int gridfs_listxattr(const char* path, char* list, size_t size)
+{
+    const char* example_list = "md5";
+    int len = strlen(example_list) + 1;
+
+    if(size == 0) {
+        return len;
+    } else if(size < len) {
+        return -ERANGE;
+    }
+
+    memcpy(list, example_list, len);
+    return len;
+}
+
+static int gridfs_getxattr(const char* path, const char* name, char* value, size_t size)
+{
+    if(strcmp(name, "md5") != 0) {
+        return -ENOATTR;
+    }
+
+    GridFile file = gf->findFile(path);
+    if(!file.exists()) {
+        return -ENOENT;
+    }
+
+    const char* attr = file.getMD5().c_str();
+    int len = strlen(attr) + 1;
+
+    if(size == 0) {
+        return len;
+    } else if(size < len) {
+        return -ERANGE;
+    }
+
+    memcpy(value, attr, len);
+    return len;
+}
+
+static int gridfs_setxattr(const char* path, const char* name, const char* value,
+                           size_t size, int flags)
+{
+    return -ENOTSUP;
+}
+
 struct options {
     char* host;
     char* db;
@@ -152,6 +197,9 @@ int main(int argc, char *argv[])
     gridfs_oper.readdir = gridfs_readdir;
     gridfs_oper.open = gridfs_open;
     gridfs_oper.read = gridfs_read;
+    gridfs_oper.listxattr = gridfs_listxattr;
+    gridfs_oper.getxattr = gridfs_getxattr;
+    gridfs_oper.setxattr = gridfs_setxattr;
 
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
