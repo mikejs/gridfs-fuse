@@ -125,32 +125,23 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
 
 static int gridfs_listxattr(const char* path, char* list, size_t size)
 {
-    const char* example_list = "md5";
-    int len = strlen(example_list) + 1;
-
-    if(size == 0) {
-        return len;
-    } else if(size < len) {
-        return -ERANGE;
-    }
-
-    memcpy(list, example_list, len);
-    return len;
-}
-
-static int gridfs_getxattr(const char* path, const char* name, char* value, size_t size)
-{
-    if(strcmp(name, "md5") != 0) {
-        return -ENOATTR;
-    }
-
     GridFile file = gf->findFile(path);
     if(!file.exists()) {
         return -ENOENT;
     }
 
-    const char* attr = file.getMD5().c_str();
-    int len = strlen(attr) + 1;
+    int len = 0;
+    BSONObj metadata = file.getMetadata();
+    set<string> field_set;
+    metadata.getFieldNames(field_set);
+    for(set<string>::const_iterator s = field_set.begin(); s != field_set.end(); s++) {
+        int field_len = s->size() + 1;
+        len += field_len;
+        if(size >= len) {
+            memcpy(list, s->c_str(), field_len);
+            list += field_len;
+        }
+    }
 
     if(size == 0) {
         return len;
@@ -158,7 +149,35 @@ static int gridfs_getxattr(const char* path, const char* name, char* value, size
         return -ERANGE;
     }
 
-    memcpy(value, attr, len);
+    return len;
+}
+
+static int gridfs_getxattr(const char* path, const char* name, char* value, size_t size)
+{
+    GridFile file = gf->findFile(path);
+    if(!file.exists()) {
+        return -ENOENT;
+    }
+
+    BSONObj metadata = file.getMetadata();
+    if(metadata.isEmpty()) {
+        return -ENOATTR;
+    }
+
+    BSONElement field = metadata[name];
+    if(field.eoo()) {
+        return -ENOATTR;
+    }
+
+    string field_str = field.toString();
+    int len = field_str.size() + 1;
+    if(size == 0) {
+        return len;
+    } else if(size < len) {
+        return -ERANGE;
+    }
+
+    memcpy(value, field_str.c_str(), len);
     return len;
 }
 
