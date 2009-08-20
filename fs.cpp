@@ -27,6 +27,10 @@
 #include <mongo/client/dbclient.h>
 #include <mongo/client/gridfs.h>
 
+#ifdef __linux__
+#include <attr/xattr.h>
+#endif
+
 using namespace std;
 using namespace mongo;
 
@@ -109,10 +113,10 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
         const char *d = chunk.data(cl);
 
         if(len) {
-            to_read = min((long unsigned)cl, size - len);
+            to_read = min((long unsigned)cl, (long unsigned)(size - len));
             memcpy(buf + len, d, sizeof(char)*to_read);
         } else {
-            to_read = min((long unsigned)(cl - (offset % cl)), size - len);
+            to_read = min((long unsigned)(cl - (offset % cl)), (long unsigned)(size - len));
             memcpy(buf + len, d + (offset % cl), to_read);
         }
 
