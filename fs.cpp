@@ -46,15 +46,18 @@ static int gridfs_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
     memset(stbuf, 0, sizeof(struct stat));
-
+    
     if(strcmp(path, "/") == 0) {
         stbuf->st_mode = S_IFDIR | 0555;
         stbuf->st_nlink = 2;
     } else {
+        if ( path[0] == '/' )
+            path++;
         GridFile file = gf->findFile(path);
         if(!file.exists()) {
             return -ENOENT;
         }
+
         stbuf->st_mode = S_IFREG | 0555;
         stbuf->st_nlink = 1;
         stbuf->st_size = file.getContentLength();
@@ -78,7 +81,8 @@ static int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
     auto_ptr<DBClientCursor> cursor = gf->list();
     while(cursor->more()) {
-        filler(buf, cursor->next().getStringField("filename") + 1, NULL, 0);
+        BSONObj f = cursor->next();
+        filler(buf, f.getStringField("filename") , NULL , 0);
     }
 
     return 0;
@@ -209,8 +213,8 @@ static int gridfs_setxattr(const char* path, const char* name, const char* value
 }
 
 struct options {
-    char* host;
-    char* db;
+    const char* host;
+    const char* db;
 } options;
 
 #define GRIDFS_OPT_KEY(t, p, v) { t, offsetof(struct options, p), v }
