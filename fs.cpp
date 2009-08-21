@@ -140,10 +140,11 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
 
     if(!file.exists()) {
         sdc.done();
-        return 0;
+        return -EBADF;
     }
 
-    int chunk_num = offset / file.getChunkSize();
+    int chunk_size = file.getChunkSize();
+    int chunk_num = offset / chunk_size;
 
     while(len < size && chunk_num < file.getNumChunks()) {
         Chunk chunk = file.getChunk(chunk_num);
@@ -154,10 +155,10 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
 
         if(len) {
             to_read = min((long unsigned)cl, (long unsigned)(size - len));
-            memcpy(buf + len, d, sizeof(char)*to_read);
+            memcpy(buf + len, d, to_read);
         } else {
-            to_read = min((long unsigned)(cl - (offset % cl)), (long unsigned)(size - len));
-            memcpy(buf + len, d + (offset % cl), to_read);
+            to_read = min((long unsigned)(cl - (offset % chunk_size)), (long unsigned)(size - len));
+            memcpy(buf + len, d + (offset % chunk_size), to_read);
         }
 
         len += to_read;
