@@ -183,6 +183,10 @@ static int gridfs_listxattr(const char* path, char* list, size_t size)
 
 static int gridfs_getxattr(const char* path, const char* name, char* value, size_t size)
 {
+    if(strcmp(path, "/") == 0) {
+        return -ENOATTR;
+    }
+
     path = fuse_to_mongo_path(path);
     const char* attr_name;
 
