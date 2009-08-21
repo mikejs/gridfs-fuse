@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <mongo/client/dbclient.h>
 #include <mongo/client/gridfs.h>
+#include <mongo/client/connpool.h>
 
 #ifdef __linux__
 #include <attr/xattr.h>
@@ -35,8 +36,12 @@ using namespace std;
 using namespace mongo;
 
 static struct fuse_operations gridfs_oper;
-DBClientConnection c;
-GridFS *gf;
+
+struct options {
+    const char* host;
+    const char* db;
+} options;
+
 
 time_t mongo_time_to_unix_time(unsigned long long mtime) {
     return mtime / 1000;
@@ -60,7 +65,12 @@ static int gridfs_getattr(const char *path, struct stat *stbuf)
         stbuf->st_nlink = 2;
     } else {
         path = fuse_to_mongo_path(path);
-        GridFile file = gf->findFile(path);
+
+        ScopedDbConnection sdc(options.host);
+        GridFS gf(sdc.conn(), options.db);
+        GridFile file = gf.findFile(path);
+        sdc.done();
+
         if(!file.exists()) {
             return -ENOENT;
         }
@@ -86,11 +96,15 @@ static int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
 
-    auto_ptr<DBClientCursor> cursor = gf->list();
+    ScopedDbConnection sdc(options.host);
+    GridFS gf(sdc.conn(), options.db);
+
+    auto_ptr<DBClientCursor> cursor = gf.list();
     while(cursor->more()) {
         BSONObj f = cursor->next();
         filler(buf, f.getStringField("filename") , NULL , 0);
     }
+    sdc.done();
 
     return 0;
 }
@@ -102,7 +116,11 @@ static int gridfs_open(const char *path, struct fuse_file_info *fi)
 
     path = fuse_to_mongo_path(path);
 
-    GridFile file = gf->findFile(path);
+    ScopedDbConnection sdc(options.host);
+    GridFS gf(sdc.conn(), options.db);
+    GridFile file = gf.findFile(path);
+    sdc.done();
+
     if(file.exists()) {
         return 0;
     }
@@ -116,8 +134,12 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
     path = fuse_to_mongo_path(path);
     size_t len = 0;
 
-    GridFile file = gf->findFile(path);
+    ScopedDbConnection sdc(options.host);
+    GridFS gf(sdc.conn(), options.db);
+    GridFile file = gf.findFile(path);
+
     if(!file.exists()) {
+        sdc.done();
         return 0;
     }
 
@@ -142,6 +164,7 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
         chunk_num++;
     }
 
+    sdc.done();
     return len;
 }
 
@@ -149,7 +172,11 @@ static int gridfs_listxattr(const char* path, char* list, size_t size)
 {
     path = fuse_to_mongo_path(path);
 
-    GridFile file = gf->findFile(path);
+    ScopedDbConnection sdc(options.host);
+    GridFS gf(sdc.conn(), options.db);
+    GridFile file = gf.findFile(path);
+    sdc.done();
+
     if(!file.exists()) {
         return -ENOENT;
     }
@@ -200,7 +227,11 @@ static int gridfs_getxattr(const char* path, const char* name, char* value, size
     attr_name = name;
 #endif
 
-    GridFile file = gf->findFile(path);
+    ScopedDbConnection sdc(options.host);
+    GridFS gf(sdc.conn(), options.db);
+    GridFile file = gf.findFile(path);
+    sdc.done();
+
     if(!file.exists()) {
         return -ENOENT;
     }
@@ -224,6 +255,7 @@ static int gridfs_getxattr(const char* path, const char* name, char* value, size
     }
 
     memcpy(value, field_str.c_str(), len);
+
     return len;
 }
 
@@ -232,11 +264,6 @@ static int gridfs_setxattr(const char* path, const char* name, const char* value
 {
     return -ENOTSUP;
 }
-
-struct options {
-    const char* host;
-    const char* db;
-} options;
 
 #define GRIDFS_OPT_KEY(t, p, v) { t, offsetof(struct options, p), v }
 
@@ -279,9 +306,6 @@ int main(int argc, char *argv[])
     if(!options.db) {
         options.db = "test";
     }
-
-    c.connect(options.host);
-    gf = new GridFS(c, options.db);
 
     return fuse_main(args.argc, args.argv, &gridfs_oper, NULL);
 }
