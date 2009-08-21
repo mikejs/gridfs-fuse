@@ -42,6 +42,14 @@ time_t mongo_time_to_unix_time(unsigned long long mtime) {
     return mtime / 1000;
 }
 
+const char* fuse_to_mongo_path(const char* path) {
+    if(path[0] == '/') {
+        return path + 1;
+    } else {
+        return path;
+    }
+}
+
 static int gridfs_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
@@ -51,8 +59,7 @@ static int gridfs_getattr(const char *path, struct stat *stbuf)
         stbuf->st_mode = S_IFDIR | 0555;
         stbuf->st_nlink = 2;
     } else {
-        if ( path[0] == '/' )
-            path++;
+        path = fuse_to_mongo_path(path);
         GridFile file = gf->findFile(path);
         if(!file.exists()) {
             return -ENOENT;
@@ -89,6 +96,8 @@ static int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 }
 static int gridfs_open(const char *path, struct fuse_file_info *fi)
 {
+    path = fuse_to_mongo_path(path);
+
     GridFile file = gf->findFile(path);
     if(file.exists()) {
         return 0;
@@ -100,6 +109,7 @@ static int gridfs_open(const char *path, struct fuse_file_info *fi)
 static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
                       struct fuse_file_info *fi)
 {
+    path = fuse_to_mongo_path(path);
     size_t len = 0;
 
     GridFile file = gf->findFile(path);
@@ -133,6 +143,8 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
 
 static int gridfs_listxattr(const char* path, char* list, size_t size)
 {
+    path = fuse_to_mongo_path(path);
+
     GridFile file = gf->findFile(path);
     if(!file.exists()) {
         return -ENOENT;
@@ -167,6 +179,7 @@ static int gridfs_listxattr(const char* path, char* list, size_t size)
 
 static int gridfs_getxattr(const char* path, const char* name, char* value, size_t size)
 {
+    path = fuse_to_mongo_path(path);
     const char* attr_name;
 
 #ifdef __linux__
