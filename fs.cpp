@@ -96,6 +96,10 @@ static int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 }
 static int gridfs_open(const char *path, struct fuse_file_info *fi)
 {
+    if((fi->flags & O_ACCMODE) != O_RDONLY) {
+        return -EACCES;
+    }
+
     path = fuse_to_mongo_path(path);
 
     GridFile file = gf->findFile(path);
