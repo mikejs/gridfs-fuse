@@ -15,15 +15,14 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define FUSE_USE_VERSION  26
-
+#include "operations.h"
+#include "options.h"
+#include "utils.h"
 #include <algorithm>
-#include <fuse.h>
-#include <fuse/fuse_opt.h>
-#include <cstdio>
 #include <cstring>
 #include <cerrno>
 #include <fcntl.h>
+
 #include <mongo/client/dbclient.h>
 #include <mongo/client/gridfs.h>
 #include <mongo/client/connpool.h>
@@ -35,27 +34,7 @@
 using namespace std;
 using namespace mongo;
 
-static struct fuse_operations gridfs_oper;
-
-struct options {
-    const char* host;
-    const char* db;
-} options;
-
-
-time_t mongo_time_to_unix_time(unsigned long long mtime) {
-    return mtime / 1000;
-}
-
-const char* fuse_to_mongo_path(const char* path) {
-    if(path[0] == '/') {
-        return path + 1;
-    } else {
-        return path;
-    }
-}
-
-static int gridfs_getattr(const char *path, struct stat *stbuf)
+int gridfs_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
     memset(stbuf, 0, sizeof(struct stat));
@@ -66,8 +45,8 @@ static int gridfs_getattr(const char *path, struct stat *stbuf)
     } else {
         path = fuse_to_mongo_path(path);
 
-        ScopedDbConnection sdc(options.host);
-        GridFS gf(sdc.conn(), options.db);
+        ScopedDbConnection sdc(gridfs_options.host);
+        GridFS gf(sdc.conn(), gridfs_options.db);
         GridFile file = gf.findFile(path);
         sdc.done();
 
@@ -87,8 +66,8 @@ static int gridfs_getattr(const char *path, struct stat *stbuf)
     return 0;
 }
 
-static int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-                         off_t offset, struct fuse_file_info *fi)
+int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
+                   off_t offset, struct fuse_file_info *fi)
 {
     if(strcmp(path, "/") != 0)
         return -ENOENT;
@@ -96,8 +75,8 @@ static int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
 
-    ScopedDbConnection sdc(options.host);
-    GridFS gf(sdc.conn(), options.db);
+    ScopedDbConnection sdc(gridfs_options.host);
+    GridFS gf(sdc.conn(), gridfs_options.db);
 
     auto_ptr<DBClientCursor> cursor = gf.list();
     while(cursor->more()) {
@@ -108,7 +87,8 @@ static int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
     return 0;
 }
-static int gridfs_open(const char *path, struct fuse_file_info *fi)
+
+int gridfs_open(const char *path, struct fuse_file_info *fi)
 {
     if((fi->flags & O_ACCMODE) != O_RDONLY) {
         return -EACCES;
@@ -116,8 +96,8 @@ static int gridfs_open(const char *path, struct fuse_file_info *fi)
 
     path = fuse_to_mongo_path(path);
 
-    ScopedDbConnection sdc(options.host);
-    GridFS gf(sdc.conn(), options.db);
+    ScopedDbConnection sdc(gridfs_options.host);
+    GridFS gf(sdc.conn(), gridfs_options.db);
     GridFile file = gf.findFile(path);
     sdc.done();
 
@@ -128,14 +108,14 @@ static int gridfs_open(const char *path, struct fuse_file_info *fi)
     return -ENOENT;
 }
 
-static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
-                      struct fuse_file_info *fi)
+int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
+                struct fuse_file_info *fi)
 {
     path = fuse_to_mongo_path(path);
     size_t len = 0;
 
-    ScopedDbConnection sdc(options.host);
-    GridFS gf(sdc.conn(), options.db);
+    ScopedDbConnection sdc(gridfs_options.host);
+    GridFS gf(sdc.conn(), gridfs_options.db);
     GridFile file = gf.findFile(path);
 
     if(!file.exists()) {
@@ -169,12 +149,12 @@ static int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
     return len;
 }
 
-static int gridfs_listxattr(const char* path, char* list, size_t size)
+int gridfs_listxattr(const char* path, char* list, size_t size)
 {
     path = fuse_to_mongo_path(path);
 
-    ScopedDbConnection sdc(options.host);
-    GridFS gf(sdc.conn(), options.db);
+    ScopedDbConnection sdc(gridfs_options.host);
+    GridFS gf(sdc.conn(), gridfs_options.db);
     GridFile file = gf.findFile(path);
     sdc.done();
 
@@ -209,7 +189,7 @@ static int gridfs_listxattr(const char* path, char* list, size_t size)
     return len;
 }
 
-static int gridfs_getxattr(const char* path, const char* name, char* value, size_t size)
+int gridfs_getxattr(const char* path, const char* name, char* value, size_t size)
 {
     if(strcmp(path, "/") == 0) {
         return -ENOATTR;
@@ -228,8 +208,8 @@ static int gridfs_getxattr(const char* path, const char* name, char* value, size
     attr_name = name;
 #endif
 
-    ScopedDbConnection sdc(options.host);
-    GridFS gf(sdc.conn(), options.db);
+    ScopedDbConnection sdc(gridfs_options.host);
+    GridFS gf(sdc.conn(), gridfs_options.db);
     GridFile file = gf.findFile(path);
     sdc.done();
 
@@ -260,53 +240,8 @@ static int gridfs_getxattr(const char* path, const char* name, char* value, size
     return len;
 }
 
-static int gridfs_setxattr(const char* path, const char* name, const char* value,
-                           size_t size, int flags)
+int gridfs_setxattr(const char* path, const char* name, const char* value,
+                    size_t size, int flags)
 {
     return -ENOTSUP;
-}
-
-#define GRIDFS_OPT_KEY(t, p, v) { t, offsetof(struct options, p), v }
-
-enum {
-    KEY_VERSION,
-    KEY_HELP
-};
-
-static struct fuse_opt gridfs_opts[] =
-{
-    GRIDFS_OPT_KEY("--host=%s", host, 0),
-    GRIDFS_OPT_KEY("--db=%s", db, 0),
-    FUSE_OPT_KEY("-V", KEY_VERSION),
-    FUSE_OPT_KEY("--version", KEY_VERSION),
-    FUSE_OPT_KEY("-h", KEY_HELP),
-    FUSE_OPT_KEY("--help", KEY_HELP),
-    NULL
-};
-
-int main(int argc, char *argv[])
-{
-    gridfs_oper.getattr = gridfs_getattr;
-    gridfs_oper.readdir = gridfs_readdir;
-    gridfs_oper.open = gridfs_open;
-    gridfs_oper.read = gridfs_read;
-    gridfs_oper.listxattr = gridfs_listxattr;
-    gridfs_oper.getxattr = gridfs_getxattr;
-    gridfs_oper.setxattr = gridfs_setxattr;
-
-    struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
-
-    memset(&options, 0, sizeof(struct options));
-    if(fuse_opt_parse(&args, &options, gridfs_opts, NULL) == -1) {
-        return -1;
-    }
-
-    if(!options.host) {
-        options.host = "localhost";
-    }
-    if(!options.db) {
-        options.db = "test";
-    }
-
-    return fuse_main(args.argc, args.argv, &gridfs_oper, NULL);
 }
