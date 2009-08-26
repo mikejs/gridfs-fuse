@@ -19,6 +19,8 @@
 #define __UTILS_H
 
 #include <ctime>
+#include <string>
+#include <cstring>
 
 inline const char* fuse_to_mongo_path(const char* path)
 {
@@ -32,6 +34,27 @@ inline const char* fuse_to_mongo_path(const char* path)
 inline time_t mongo_time_to_unix_time(unsigned long long mtime)
 {
     return mtime / 1000;
+}
+
+inline std::string namespace_xattr(const std::string name)
+{
+#ifdef __linux__
+    return "user." + name;
+#else
+    return name;
+#endif
+}
+
+inline const char* unnamespace_xattr(const char* name) {
+#ifdef __linux__
+    if(std::strstr(name, "user.") == name) {
+        return name + 5;
+    } else {
+        return NULL;
+    }
+#else
+    return name;
+#endif
 }
 
 #endif

@@ -167,11 +167,7 @@ int gridfs_listxattr(const char* path, char* list, size_t size)
     set<string> field_set;
     metadata.getFieldNames(field_set);
     for(set<string>::const_iterator s = field_set.begin(); s != field_set.end(); s++) {
-#ifdef __linux__
-        string attr_name = "user." + *s;
-#else
-        string attr_name = *s;
-#endif
+        string attr_name = namespace_xattr(*s);
         int field_len = attr_name.size() + 1;
         len += field_len;
         if(size >= len) {
@@ -196,17 +192,10 @@ int gridfs_getxattr(const char* path, const char* name, char* value, size_t size
     }
 
     path = fuse_to_mongo_path(path);
-    const char* attr_name;
-
-#ifdef __linux__
-    if(strstr(name, "user.") == name) {
-        attr_name = name + 5;
-    } else {
+    const char* attr_name = unnamespace_xattr(name);
+    if(!attr_name) {
         return -ENOATTR;
     }
-#else
-    attr_name = name;
-#endif
 
     ScopedDbConnection sdc(gridfs_options.host);
     GridFS gf(sdc.conn(), gridfs_options.db);
