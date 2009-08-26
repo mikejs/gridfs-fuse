@@ -35,4 +35,4 @@ env = conf.Finish()
 
 files = ['main.cpp', 'operations.cpp', 'options.cpp']
 
-env.Program('mount-gridfs', files)
+env.Program('mount_gridfs', files)
