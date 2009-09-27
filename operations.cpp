@@ -201,6 +201,10 @@ int gridfs_listxattr(const char* path, char* list, size_t size)
 {
     path = fuse_to_mongo_path(path);
 
+    if(open_files.find(path) != open_files.end()) {
+        return 0;
+    }
+
     ScopedDbConnection sdc(gridfs_options.host);
     GridFS gf(sdc.conn(), gridfs_options.db);
     GridFile file = gf.findFile(path);
