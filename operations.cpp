@@ -115,6 +115,10 @@ int gridfs_open(const char *path, struct fuse_file_info *fi)
     path = fuse_to_mongo_path(path);
 
     if((fi->flags & O_ACCMODE) == O_RDONLY) {
+        if(open_files.find(path) != open_files.end()) {
+            return 0;
+        }
+
         ScopedDbConnection sdc(gridfs_options.host);
         GridFS gf(sdc.conn(), gridfs_options.db);
         GridFile file = gf.findFile(path);
@@ -126,11 +130,7 @@ int gridfs_open(const char *path, struct fuse_file_info *fi)
 
         return -ENOENT;
     } else {
-        if(open_files.find(path) != open_files.end()) {
-            return 0;
-        }
-
-        return -ENOENT;
+        return -EACCES;
     }
 }
 
@@ -147,7 +147,7 @@ int gridfs_release(const char* path, struct fuse_file_info* ffi)
 {
     path = fuse_to_mongo_path(path);
 
-    if(open_files.find(path) == open_files.end()) {
+    if((ffi->flags & O_ACCMODE) == O_RDONLY) {
         return 0;
     }
 
@@ -173,6 +173,13 @@ int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
 {
     path = fuse_to_mongo_path(path);
     size_t len = 0;
+
+    map<string,LocalGridFile*>::const_iterator file_iter;
+    file_iter = open_files.find(path);
+    if(file_iter != open_files.end()) {
+        LocalGridFile *lgf = file_iter->second;
+        return lgf->read(buf, size, offset);
+    }
 
     ScopedDbConnection sdc(gridfs_options.host);
     GridFS gf(sdc.conn(), gridfs_options.db);
@@ -258,6 +265,10 @@ int gridfs_getxattr(const char* path, const char* name, char* value, size_t size
     path = fuse_to_mongo_path(path);
     const char* attr_name = unnamespace_xattr(name);
     if(!attr_name) {
+        return -ENOATTR;
+    }
+
+    if(open_files.find(path) != open_files.end()) {
         return -ENOATTR;
     }
 
