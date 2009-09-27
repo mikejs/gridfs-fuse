@@ -101,6 +101,12 @@ int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
     sdc.done();
 
+    for(map<string,LocalGridFile*>::const_iterator i = open_files.begin();
+        i != open_files.end(); i++)
+    {
+        filler(buf, i->first.c_str(), NULL, 0);
+    }
+
     return 0;
 }
 
