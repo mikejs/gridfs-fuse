@@ -36,7 +36,9 @@ int main(int argc, char *argv[])
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
     memset(&gridfs_options, 0, sizeof(struct gridfs_options));
-    if(fuse_opt_parse(&args, &gridfs_options, gridfs_opts, NULL) == -1) {
+    if(fuse_opt_parse(&args, &gridfs_options, gridfs_opts,
+                      gridfs_opt_proc) == -1)
+    {
         return -1;
     }
 

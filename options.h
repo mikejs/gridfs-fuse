@@ -37,4 +37,8 @@ enum {
 
 extern struct fuse_opt gridfs_opts[];
 
+int gridfs_opt_proc(void* data, const char* arg, int key,
+                    struct fuse_args* outargs);
+
+void print_help();
 #endif
