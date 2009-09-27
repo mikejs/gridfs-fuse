@@ -330,11 +330,17 @@ int gridfs_flush(const char* path, struct fuse_file_info *ffi)
 
     string db_name = gridfs_options.db;
 
-    if(open_files.find(path) == open_files.end()) {
+    map<string,LocalGridFile*>::iterator file_iter;
+    file_iter = open_files.find(path);
+    if(file_iter == open_files.end()) {
         return -ENOENT;
     }
 
-    LocalGridFile *lgf = open_files[path];
+    LocalGridFile *lgf = file_iter->second;
+
+    if(!lgf->dirty()) {
+        return 0;
+    }
 
     ScopedDbConnection sdc(gridfs_options.host);
     DBClientBase &client = sdc.conn();
@@ -384,6 +390,8 @@ int gridfs_flush(const char* path, struct fuse_file_info *ffi)
     client.insert(db_name + ".fs.files", real);
 
     sdc.done();
+
+    lgf->flushed();
 
     return 0;
 }
