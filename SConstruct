@@ -39,6 +39,6 @@ conf.CheckLib( makeBoost( "system" ) )
 
 env = conf.Finish()
 
-files = ['main.cpp', 'operations.cpp', 'options.cpp']
+files = ['main.cpp', 'operations.cpp', 'options.cpp', 'local_gridfile.cpp']
 
 env.Program('mount_gridfs', files)

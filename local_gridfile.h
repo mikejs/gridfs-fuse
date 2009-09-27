@@ -3,12 +3,15 @@
 
 #include <vector>
 #include <cstring>
+#include <iostream>
+
+const unsigned int DEFAULT_CHUNK_SIZE = 256 * 1024;
 
 class LocalGridFile {
 public:
-    LocalGridFile(int chunkSize) :
+    LocalGridFile(int chunkSize = DEFAULT_CHUNK_SIZE) :
       _chunkSize(chunkSize), _length(0) {
-          _chunks.push_back(new char[256 * 1024]);
+          _chunks.push_back(new char[_chunkSize]);
       }
 
     ~LocalGridFile() {

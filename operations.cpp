@@ -18,6 +18,7 @@
 #include "operations.h"
 #include "options.h"
 #include "utils.h"
+#include "local_gridfile.h"
 #include <algorithm>
 #include <cstring>
 #include <cerrno>
@@ -34,13 +35,15 @@
 using namespace std;
 using namespace mongo;
 
+std::map<string, LocalGridFile*> open_files;
+
 int gridfs_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
     memset(stbuf, 0, sizeof(struct stat));
     
     if(strcmp(path, "/") == 0) {
-        stbuf->st_mode = S_IFDIR | 0555;
+        stbuf->st_mode = S_IFDIR | 0777;
         stbuf->st_nlink = 2;
     } else {
         path = fuse_to_mongo_path(path);
@@ -51,6 +54,13 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
         sdc.done();
 
         if(!file.exists()) {
+            if(open_files.find(path) != open_files.end()) {
+                stbuf->st_mode = S_IFREG | 0777;
+                stbuf->st_nlink = 1;
+                stbuf->st_size = open_files[path]->getLength();
+                return 0;
+            }
+
             return -ENOENT;
         }
 
@@ -90,22 +100,60 @@ int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 int gridfs_open(const char *path, struct fuse_file_info *fi)
 {
-    if((fi->flags & O_ACCMODE) != O_RDONLY) {
-        return -EACCES;
+    path = fuse_to_mongo_path(path);
+
+    if((fi->flags & O_ACCMODE) == O_RDONLY) {
+        ScopedDbConnection sdc(gridfs_options.host);
+        GridFS gf(sdc.conn(), gridfs_options.db);
+        GridFile file = gf.findFile(path);
+        sdc.done();
+
+        if(file.exists()) {
+            return 0;
+        }
+
+        return -ENOENT;
+    } else {
+        if(open_files.find(path) != open_files.end()) {
+            return 0;
+        }
+
+        return -ENOENT;
+    }
+}
+
+int gridfs_create(const char* path, mode_t mode, struct fuse_file_info* ffi)
+{
+    path = fuse_to_mongo_path(path);
+
+    open_files[path] = new LocalGridFile(DEFAULT_CHUNK_SIZE);
+
+    return 0;
+}
+
+int gridfs_release(const char* path, struct fuse_file_info* ffi)
+{
+    path = fuse_to_mongo_path(path);
+
+    if(open_files.find(path) == open_files.end()) {
+        return 0;
     }
 
+    delete open_files[path];
+    open_files.erase(path);
+
+    return 0;
+}
+
+int gridfs_unlink(const char* path) {
     path = fuse_to_mongo_path(path);
 
     ScopedDbConnection sdc(gridfs_options.host);
     GridFS gf(sdc.conn(), gridfs_options.db);
-    GridFile file = gf.findFile(path);
+    gf.removeFile(path);
     sdc.done();
 
-    if(file.exists()) {
-        return 0;
-    }
-
-    return -ENOENT;
+    return 0;
 }
 
 int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
@@ -233,4 +281,81 @@ int gridfs_setxattr(const char* path, const char* name, const char* value,
                     size_t size, int flags)
 {
     return -ENOTSUP;
+}
+
+int gridfs_write(const char* path, const char* buf, size_t nbyte,
+                 off_t offset, struct fuse_file_info* ffi)
+{
+    path = fuse_to_mongo_path(path);
+
+    if(open_files.find(path) == open_files.end()) {
+        return -ENOENT;
+    }
+
+    LocalGridFile *lgf = open_files[path];
+
+    return lgf->write(buf, nbyte, offset);
+}
+
+int gridfs_flush(const char* path, struct fuse_file_info *ffi)
+{
+    path = fuse_to_mongo_path(path);
+
+    string db_name = gridfs_options.db;
+
+    if(open_files.find(path) == open_files.end()) {
+        return -ENOENT;
+    }
+
+    LocalGridFile *lgf = open_files[path];
+
+    ScopedDbConnection sdc(gridfs_options.host);
+    DBClientBase &client = sdc.conn();
+    GridFS gf(sdc.conn(), gridfs_options.db);
+
+    if(gf.findFile(path).exists()) {
+        gf.removeFile(path);
+    }
+
+    BSONObjBuilder fileObject;
+    BSONObj idObj;
+    OID id;
+    {
+        id.init();
+        fileObject.appendOID("_id", &id);
+        fileObject << "filename" << path;
+        fileObject << "chunkSize" << lgf->getChunkSize();
+        fileObject << "length" << lgf->getLength();
+
+        BSONObjBuilder b;
+        b.appendOID("_id", &id);
+        idObj = b.obj();
+    }
+
+    for(int i = 0; i < lgf->getNumChunks(); i++) {
+        const char *buf = lgf->getChunk(i);
+
+         int len = min(lgf->getChunkSize(), lgf->getLength() - i * lgf->getChunkSize());
+
+        OID chunk_id;
+        chunk_id.init();
+
+        BSONObjBuilder chunk_b;
+        chunk_b.appendOID("_id", &chunk_id);
+        chunk_b.appendOID("files_id", &id);
+        chunk_b.append("n", i);
+        chunk_b.appendBinDataArray("data", buf, len);
+        client.insert(db_name + ".fs.chunks", chunk_b.obj());
+    }
+
+    BSONObj res;
+    client.runCommand(gridfs_options.db, BSON("filemd5" << id), res);
+    fileObject.appendAs(res["md5"], "md5");
+
+    BSONObj real = fileObject.obj();
+    client.insert(db_name + ".fs.files", real);
+
+    sdc.done();
+
+    return 0;
 }

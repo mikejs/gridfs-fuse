@@ -28,10 +28,15 @@ int main(int argc, char *argv[])
     gridfs_oper.getattr = gridfs_getattr;
     gridfs_oper.readdir = gridfs_readdir;
     gridfs_oper.open = gridfs_open;
+    gridfs_oper.create = gridfs_create;
+    gridfs_oper.release = gridfs_release;
+    gridfs_oper.unlink = gridfs_unlink;
     gridfs_oper.read = gridfs_read;
     gridfs_oper.listxattr = gridfs_listxattr;
     gridfs_oper.getxattr = gridfs_getxattr;
     gridfs_oper.setxattr = gridfs_setxattr;
+    gridfs_oper.write = gridfs_write;
+    gridfs_oper.flush = gridfs_flush;
 
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
