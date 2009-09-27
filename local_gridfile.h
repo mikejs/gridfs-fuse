@@ -27,6 +27,7 @@ public:
     char* getChunk(int n) { return _chunks[n]; }
 
     int write(const char* buf, size_t nbyte, off_t offset);
+    int read(char* buf, size_t size, off_t offset);
 
 private:
     int _chunkSize, _length;
