@@ -56,8 +56,8 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
     if(file_iter != open_files.end()) {
         stbuf->st_mode = S_IFREG | 0777;
         stbuf->st_nlink = 1;
-        stbuf->st_ctime = mongo_time();
-        stbuf->st_mtime = mongo_time();
+        stbuf->st_ctime = time(NULL);
+        stbuf->st_mtime = time(NULL);
         stbuf->st_size = file_iter->second->getLength();
         return 0;
     }
