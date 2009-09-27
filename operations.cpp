@@ -330,6 +330,7 @@ int gridfs_flush(const char* path, struct fuse_file_info *ffi)
         fileObject << "filename" << path;
         fileObject << "chunkSize" << lgf->getChunkSize();
         fileObject << "length" << lgf->getLength();
+        fileObject.appendDate("uploadDate", mongo_time());
 
         BSONObjBuilder b;
         b.appendOID("_id", &id);
