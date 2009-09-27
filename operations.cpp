@@ -45,33 +45,39 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
     if(strcmp(path, "/") == 0) {
         stbuf->st_mode = S_IFDIR | 0777;
         stbuf->st_nlink = 2;
-    } else {
-        path = fuse_to_mongo_path(path);
-
-        ScopedDbConnection sdc(gridfs_options.host);
-        GridFS gf(sdc.conn(), gridfs_options.db);
-        GridFile file = gf.findFile(path);
-        sdc.done();
-
-        if(!file.exists()) {
-            if(open_files.find(path) != open_files.end()) {
-                stbuf->st_mode = S_IFREG | 0777;
-                stbuf->st_nlink = 1;
-                stbuf->st_size = open_files[path]->getLength();
-                return 0;
-            }
-
-            return -ENOENT;
-        }
-
-        stbuf->st_mode = S_IFREG | 0555;
-        stbuf->st_nlink = 1;
-        stbuf->st_size = file.getContentLength();
-
-        time_t upload_time = mongo_time_to_unix_time(file.getUploadDate());
-        stbuf->st_ctime = upload_time;
-        stbuf->st_mtime = upload_time;
+        return 0;
     }
+
+    path = fuse_to_mongo_path(path);
+
+    map<string,LocalGridFile*>::const_iterator file_iter;
+    file_iter = open_files.find(path);
+
+    if(file_iter != open_files.end()) {
+        stbuf->st_mode = S_IFREG | 0777;
+        stbuf->st_nlink = 1;
+        stbuf->st_ctime = mongo_time();
+        stbuf->st_mtime = mongo_time();
+        stbuf->st_size = file_iter->second->getLength();
+        return 0;
+    }
+
+    ScopedDbConnection sdc(gridfs_options.host);
+    GridFS gf(sdc.conn(), gridfs_options.db);
+    GridFile file = gf.findFile(path);
+    sdc.done();
+
+    if(!file.exists()) {
+        return -ENOENT;
+    }
+
+    stbuf->st_mode = S_IFREG | 0555;
+    stbuf->st_nlink = 1;
+    stbuf->st_size = file.getContentLength();
+
+    time_t upload_time = mongo_time_to_unix_time(file.getUploadDate());
+    stbuf->st_ctime = upload_time;
+    stbuf->st_mtime = upload_time;
 
     return 0;
 }
