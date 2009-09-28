@@ -37,6 +37,8 @@ using namespace mongo;
 
 std::map<string, LocalGridFile*> open_files;
 
+unsigned int FH;
+
 int gridfs_getattr(const char *path, struct stat *stbuf)
 {
     int res = 0;
@@ -140,6 +142,8 @@ int gridfs_create(const char* path, mode_t mode, struct fuse_file_info* ffi)
 
     open_files[path] = new LocalGridFile(DEFAULT_CHUNK_SIZE);
 
+    ffi->fh = FH++;
+
     return 0;
 }
 
@@ -147,7 +151,10 @@ int gridfs_release(const char* path, struct fuse_file_info* ffi)
 {
     path = fuse_to_mongo_path(path);
 
-    if((ffi->flags & O_ACCMODE) == O_RDONLY) {
+    if(!ffi->fh) {
+        // fh is not set if file is opened read only
+        // Would check ffi->flags for O_RDONLY instead but MacFuse doesn't
+        // seem to properly pass flags into release
         return 0;
     }
 
