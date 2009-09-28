@@ -337,6 +337,10 @@ int gridfs_flush(const char* path, struct fuse_file_info *ffi)
 
     string db_name = gridfs_options.db;
 
+    if(!ffi->fh) {
+        return 0;
+    }
+
     map<string,LocalGridFile*>::iterator file_iter;
     file_iter = open_files.find(path);
     if(file_iter == open_files.end()) {
