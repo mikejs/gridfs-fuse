@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
     gridfs_oper.setxattr = gridfs_setxattr;
     gridfs_oper.write = gridfs_write;
     gridfs_oper.flush = gridfs_flush;
+    gridfs_oper.rename = gridfs_rename;
 
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 

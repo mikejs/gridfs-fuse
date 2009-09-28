@@ -395,3 +395,42 @@ int gridfs_flush(const char* path, struct fuse_file_info *ffi)
 
     return 0;
 }
+
+int gridfs_rename(const char* old_path, const char* new_path)
+{
+    old_path = fuse_to_mongo_path(old_path);
+    new_path = fuse_to_mongo_path(new_path);
+
+    ScopedDbConnection sdc(gridfs_options.host);
+    DBClientBase &client = sdc.conn();
+
+    string db_name = gridfs_options.db;
+
+    BSONObj file_obj = client.findOne(db_name + ".fs.files",
+                                      BSON("filename" << old_path));
+
+    if(file_obj.isEmpty()) {
+        return -ENOENT;
+    }
+
+    BSONObjBuilder b;
+    set<string> field_names;
+    file_obj.getFieldNames(field_names);
+
+    for(set<string>::iterator name = field_names.begin();
+        name != field_names.end(); name++)
+    {
+        if(*name != "filename") {
+            b.append(file_obj.getField(*name));
+        }
+    }
+
+    b << "filename" << new_path;
+
+    client.update(db_name + ".fs.files",
+                  BSON("_id" << file_obj.getField("_id")), b.obj());
+
+    sdc.done();
+
+    return 0;
+}

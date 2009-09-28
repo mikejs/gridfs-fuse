@@ -50,4 +50,6 @@ int gridfs_write(const char* path, const char* buf, size_t nbyte,
 
 int gridfs_flush(const char* path, struct fuse_file_info* ffi);
 
+int gridfs_rename(const char* old_path, const char* new_path);
+
 #endif
