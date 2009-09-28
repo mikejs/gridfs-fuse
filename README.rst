@@ -29,7 +29,6 @@ Usage
 Current Limitations
 ===================
 
-* Read-only
 * No directories
 * No permissions or Mongo authentication
-* No support for replica pairs
+* File creation/writing very experimental
