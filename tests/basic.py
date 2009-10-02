@@ -103,6 +103,24 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
 
         self.assertEquals(size, os.stat(path).st_size)
 
+    def test_seek(self):
+        path = os.path.join(self.mount, 'file')
+        size1 = 256 * 1024 * 3
+        data1 = 'A' * size1
+        data2 = 'B' * size1
+        expected = ('A' * (size1 / 2)) + data2
+        size2 = len(expected)
+
+        with open(path, 'w') as w:
+            w.write(data1)
+            w.seek(size1 / 2)
+            w.write(data2)
+
+        with open(path, 'r') as r:
+            self.assertEquals(expected, r.read())
+
+        self.assertEquals(size2, os.stat(path).st_size)
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(BasicGridfsFUSETestCase())
