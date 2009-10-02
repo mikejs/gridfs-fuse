@@ -37,7 +37,7 @@ using namespace mongo;
 
 std::map<string, LocalGridFile*> open_files;
 
-unsigned int FH;
+unsigned int FH = 1;
 
 int gridfs_getattr(const char *path, struct stat *stbuf)
 {
