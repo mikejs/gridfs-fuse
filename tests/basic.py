@@ -46,6 +46,19 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
         self.assertEquals(0555, stat.S_IMODE(mode))
         self.assertEquals(4, stat_result.st_size)
 
+    def test_ls(self):
+        self.assertEquals(0, len(os.listdir(self.mount)))
+
+        with open(os.path.join(self.mount, 'file1'), 'w') as f1:
+            f1.write("file1")
+        with open(os.path.join(self.mount, 'file2'), 'w') as f2:
+            f2.write("file2")
+
+        files = os.listdir(self.mount)
+        self.assertEquals(2, len(files))
+        self.assert_('file1' in files)
+        self.assert_('file2' in files)
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(BasicGridfsFUSETestCase())
