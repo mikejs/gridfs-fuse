@@ -5,6 +5,7 @@ import os
 import subprocess
 import time
 import glob
+import stat
 
 class BasicGridfsFUSETestCase(unittest.TestCase):
 
@@ -33,8 +34,6 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
                              r.read())
 
     def test_stat(self):
-        import stat
-
         path = os.path.join(self.mount, 'testfile.txt')
         with open(path, 'w') as w:
             w.write('test')
@@ -88,6 +87,21 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
 
         with open(path2, 'r') as r:
             self.assertEquals('file1', r.read())
+
+    def test_big_file(self):
+        # Test creation/reading of a file that's bigger than
+        # the chunk size
+        path = os.path.join(self.mount, 'big')
+        size = 256 * 1024 * 3 + 100
+        data = 'A' * size
+
+        with open(path, 'w') as w:
+            w.write(data)
+
+        with open(path, 'r') as r:
+            self.assertEquals(data, r.read())
+
+        self.assertEquals(size, os.stat(path).st_size)
 
 def suite():
     suite = unittest.TestSuite()
