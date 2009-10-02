@@ -42,3 +42,15 @@ env = conf.Finish()
 files = ['main.cpp', 'operations.cpp', 'options.cpp', 'local_gridfile.cpp']
 
 env.Program('mount_gridfs', files)
+
+def runUnitTest(env, target, source):
+    import subprocess
+    app = str(source[0].abspath)
+    if not subprocess.call(app):
+        open(str(target[0]), 'w').write("PASSED\n")
+
+test_target = env.Command('tests.passed', 'tests/basic.py', runUnitTest)
+env.Alias("test", "tests.passed")
+env.Depends(test_target, 'mount_gridfs')
+
+env.Default(['mount_gridfs'])
