@@ -59,6 +59,18 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
         self.assert_('file1' in files)
         self.assert_('file2' in files)
 
+    def test_unlink(self):
+        path = os.path.join(self.mount, 'file')
+
+        with open(path, 'w') as w:
+            w.write("a file")
+
+        self.assert_('file' in os.listdir(self.mount))
+
+        os.unlink(path)
+
+        self.assert_('file' not in os.listdir(self.mount))
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(BasicGridfsFUSETestCase())
