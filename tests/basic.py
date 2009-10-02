@@ -9,8 +9,7 @@ import glob
 class BasicGridfsFUSETestCase(unittest.TestCase):
 
     def setUp(self):
-        self.mount = os.path.join(os.path.dirname(
-                os.path.abspath(__file__)),
+        self.mount = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   'mount')
         os.mkdir('tests/mount')
         subprocess.check_call(['./mount_gridfs', '--db=gridfstest',
@@ -25,13 +24,27 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
         subprocess.check_call(['umount', self.mount])
         os.rmdir(self.mount)
         
-    def testreadwrite(self):
-        with open(os.path.join(self.mount, 'testfile.txt'), 'w') as f:
+    def test_read_write(self):
+        with open(os.path.join(self.mount, 'testfile.txt'), 'w') as w:
             w.write("This is a test of GridFS FUSE.")
         
         with open(os.path.join(self.mount, 'testfile.txt'), 'r') as r:
             self.assertEqual("This is a test of GridFS FUSE.",
                              r.read())
+
+    def test_stat(self):
+        import stat
+
+        path = os.path.join(self.mount, 'testfile.txt')
+        with open(path, 'w') as w:
+            w.write('test')
+
+        stat_result = os.stat(path)
+        mode = stat_result.st_mode
+
+        self.assert_(stat.S_ISREG(mode))
+        self.assertEquals(0555, stat.S_IMODE(mode))
+        self.assertEquals(4, stat_result.st_size)
 
 def suite():
     suite = unittest.TestSuite()
