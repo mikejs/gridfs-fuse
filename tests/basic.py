@@ -71,6 +71,24 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
 
         self.assert_('file' not in os.listdir(self.mount))
 
+    def test_rename(self):
+        path1 = os.path.join(self.mount, 'file1')
+        path2 = os.path.join(self.mount, 'file2')
+
+        with open(path1, 'w') as w:
+            w.write('file1')
+
+        self.assert_('file1' in os.listdir(self.mount))
+        self.assert_('file2' not in os.listdir(self.mount))
+
+        os.rename(path1, path2)
+
+        self.assert_('file1' not in os.listdir(self.mount))
+        self.assert_('file2' in os.listdir(self.mount))
+
+        with open(path2, 'r') as r:
+            self.assertEquals('file1', r.read())
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(BasicGridfsFUSETestCase())
