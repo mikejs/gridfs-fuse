@@ -56,7 +56,7 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
     file_iter = open_files.find(path);
 
     if(file_iter != open_files.end()) {
-        stbuf->st_mode = S_IFREG | 0777;
+        stbuf->st_mode = S_IFREG | 0555;
         stbuf->st_nlink = 1;
         stbuf->st_ctime = time(NULL);
         stbuf->st_mtime = time(NULL);
