@@ -22,7 +22,12 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
     def tearDown(self):
         for filename in glob.iglob(os.path.join(self.mount, '*')):
             os.remove(filename)
-        subprocess.check_call(['umount', self.mount])
+
+        if os.sys.platform == 'linux2':
+            subprocess.check_call(['fusermount', '-u', self.mount])
+        else:
+            subprocess.check_call(['umount', self.mount])
+
         os.rmdir(self.mount)
         
     def test_read_write(self):
