@@ -34,16 +34,36 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
                              r.read())
 
     def test_stat(self):
+        def assert_stat(path, mode=0555, size=4):
+            stat_result = os.stat(path)
+            st_mode = stat_result.st_mode
+            self.assert_(stat.S_ISREG(st_mode))
+            self.assertEquals(mode, stat.S_IMODE(st_mode))
+            self.assertEquals(size, stat_result.st_size)
+
         path = os.path.join(self.mount, 'testfile.txt')
         with open(path, 'w') as w:
+            assert_stat(path, size=0)
             w.write('test')
+            w.flush()
+            assert_stat(path)
 
-        stat_result = os.stat(path)
-        mode = stat_result.st_mode
+        assert_stat(path)
 
-        self.assert_(stat.S_ISREG(mode))
-        self.assertEquals(0555, stat.S_IMODE(mode))
-        self.assertEquals(4, stat_result.st_size)
+    def test_read_write(self):
+        path = os.path.join(self.mount, 'file')
+
+        with open(path, 'w') as w:
+            self.assertRaises(IOError, open, path, 'w')
+
+            w.write('Hello')
+            w.flush()
+
+            with open(path, 'r') as r:
+                self.assertEquals('Hello', r.read())
+                w.write(' world')
+                w.flush()
+                self.assertEquals(' world', r.read())
 
     def test_ls(self):
         self.assertEquals(0, len(os.listdir(self.mount)))
