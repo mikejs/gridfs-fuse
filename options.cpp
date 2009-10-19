@@ -42,7 +42,7 @@ int gridfs_opt_proc(void* data, const char* arg, int key,
     }
 
     if(key == KEY_VERSION) {
-        cout << "gridfs-fuse version 0.2" << endl;
+        cout << "gridfs-fuse version 0.3" << endl;
         return -1;
     }
 

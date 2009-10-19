@@ -7,7 +7,7 @@ Allows you to mount a MongoDB GridFS instance as a local filesystem.
 Requirements
 ============
 
-* A recent (0.9.10+) MongoDB
+* A recent (v1.1.2 or later) MongoDB
 * FUSE
 * scons
 * Boost
