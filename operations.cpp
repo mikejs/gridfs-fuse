@@ -335,8 +335,6 @@ int gridfs_flush(const char* path, struct fuse_file_info *ffi)
 {
     path = fuse_to_mongo_path(path);
 
-    string db_name = gridfs_options.db;
-
     if(!ffi->fh) {
         return 0;
     }
@@ -361,44 +359,11 @@ int gridfs_flush(const char* path, struct fuse_file_info *ffi)
         gf.removeFile(path);
     }
 
-    BSONObjBuilder fileObject;
-    BSONObj idObj;
-    OID id;
-    {
-        id.init();
-        fileObject.appendOID("_id", &id);
-        fileObject << "filename" << path;
-        fileObject << "chunkSize" << lgf->getChunkSize();
-        fileObject << "length" << lgf->getLength();
-        fileObject.appendDate("uploadDate", mongo_time());
+    size_t len = lgf->getLength();
+    char *buf = new char[len];
+    lgf->read(buf, len, 0);
 
-        BSONObjBuilder b;
-        b.appendOID("_id", &id);
-        idObj = b.obj();
-    }
-
-    for(int i = 0; i < lgf->getNumChunks(); i++) {
-        const char *buf = lgf->getChunk(i);
-
-         int len = min(lgf->getChunkSize(), lgf->getLength() - i * lgf->getChunkSize());
-
-        OID chunk_id;
-        chunk_id.init();
-
-        BSONObjBuilder chunk_b;
-        chunk_b.appendOID("_id", &chunk_id);
-        chunk_b.appendOID("files_id", &id);
-        chunk_b.append("n", i);
-        chunk_b.appendBinDataArray("data", buf, len);
-        client.insert(db_name + ".fs.chunks", chunk_b.obj());
-    }
-
-    BSONObj res;
-    client.runCommand(gridfs_options.db, BSON("filemd5" << id), res);
-    fileObject.appendAs(res["md5"], "md5");
-
-    BSONObj real = fileObject.obj();
-    client.insert(db_name + ".fs.files", real);
+    gf.storeFile(buf, len, path);
 
     sdc.done();
 
