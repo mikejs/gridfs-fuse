@@ -45,8 +45,7 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
     memset(stbuf, 0, sizeof(struct stat));
     
     if(strcmp(path, "/") == 0) {
-		cout << "Returning stat for base dir: " << path;
-        stbuf->st_mode = S_IFDIR | 0777;
+		stbuf->st_mode = S_IFDIR | 0777;
         stbuf->st_nlink = 2;
         return 0;
     }
