@@ -21,7 +21,7 @@ int LocalGridFile::write(const char *buf, size_t nbyte, off_t offset)
     int buf_offset = offset % _chunkSize;
     if(buf_offset) {
         dest_buf += offset % _chunkSize;
-        int to_write = min(nbyte - written,
+        int to_write = min<size_t>(nbyte - written,
                            (long unsigned int)(_chunkSize - buf_offset));
         memcpy(dest_buf, buf, to_write);
         written += to_write;
@@ -30,7 +30,7 @@ int LocalGridFile::write(const char *buf, size_t nbyte, off_t offset)
 
     while(written < nbyte) {
         dest_buf = _chunks[chunk_num];
-        int to_write = min(nbyte - written,
+        int to_write = min<size_t>(nbyte - written,
                            (long unsigned int)_chunkSize);
         memcpy(dest_buf, buf, to_write);
         written += to_write;
@@ -50,11 +50,11 @@ int LocalGridFile::read(char* buf, size_t size, off_t offset)
 
     while(len < size && chunk_num < _chunks.size()) {
         const char* chunk = _chunks[chunk_num];
-        size_t to_read = min((size_t)_chunkSize, size - len);
+        size_t to_read = min<size_t>((size_t)_chunkSize, size - len);
 
         if(!len && offset) {
             chunk += offset % _chunkSize;
-            to_read = min(to_read,
+            to_read = min<size_t>(to_read,
                           (size_t)(_chunkSize - (offset % _chunkSize)));
         }
 

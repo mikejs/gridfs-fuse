@@ -45,6 +45,7 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
     memset(stbuf, 0, sizeof(struct stat));
     
     if(strcmp(path, "/") == 0) {
+		cout << "Returning stat for base dir: " << path;
         stbuf->st_mode = S_IFDIR | 0777;
         stbuf->st_nlink = 2;
         return 0;
@@ -65,12 +66,20 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
     }
 
     ScopedDbConnection sdc(gridfs_options.host);
+
     GridFS gf(sdc.conn(), gridfs_options.db);
     GridFile file = gf.findFile(path);
     sdc.done();
 
     if(!file.exists()) {
-        return -ENOENT;
+		// HACK: Assumes that if the last part of the path has a '.' in it, it's the leaf of the path, and if we haven't found a match by now,
+		// give up and go home. This works just dandy as long as you avoid putting periods in your 'directory' names.
+		if(is_leaf(path)) {
+			return -ENOENT;
+		}
+        stbuf->st_mode = S_IFDIR | 0777;
+        stbuf->st_nlink = 2;
+        return 0;
     }
 
     stbuf->st_mode = S_IFREG | 0555;

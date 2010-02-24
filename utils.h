@@ -31,6 +31,16 @@ inline const char* fuse_to_mongo_path(const char* path)
     }
 }
 
+inline const bool is_leaf(const char* path) {
+	int pp = -1;
+	int sp = -1;
+	for(int i=0; i<strlen(path); i++) {
+		if(path[i] == '/') sp = i;
+		if(path[i] == '.') pp = i;
+	}
+	return pp > sp;
+}
+
 inline time_t mongo_time_to_unix_time(unsigned long long mtime)
 {
     return mtime / 1000;

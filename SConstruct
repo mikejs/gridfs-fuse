@@ -13,6 +13,7 @@ if 'darwin' == os.sys.platform:
     if os.uname()[2] == '10.0.0':
         # Snow Leopard uses 64 bit inodes
         fuse_lib += '_ino64'
+env.Append(CPPPATH=['/opt/mongo/include'], LIBPATH=['/opt/mongo/lib'])
 
 conf = Configure( env )
 libs = [ "mongoclient" , fuse_lib ]
