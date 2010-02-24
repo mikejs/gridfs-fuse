@@ -41,6 +41,14 @@ inline const bool is_leaf(const char* path) {
 	return pp > sp;
 }
 
+inline const int path_depth(const char* path) {
+	int sc = 0;
+	for(int i=0; i<strlen(path); i++) {
+		if(path[i] == '/') sc++;
+	}
+	return sc;
+}
+
 inline time_t mongo_time_to_unix_time(unsigned long long mtime)
 {
     return mtime / 1000;

@@ -63,22 +63,27 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
         stbuf->st_size = file_iter->second->getLength();
         return 0;
     }
+    
+	// HACK: This is a protective measure to ensure we don't spin off into forever if a path without a period is requested.
+	if(path_depth(path) > 10) {		
+		return -ENOENT;
+	}
 
-    ScopedDbConnection sdc(gridfs_options.host);
+	// HACK: Assumes that if the last part of the path has a '.' in it, it's the leaf of the path, and if we haven't found a match by now,
+	// give up and go home. This works just dandy as long as you avoid putting periods in your 'directory' names.
+	if(!is_leaf(path)) {
+        stbuf->st_mode = S_IFDIR | 0777;
+        stbuf->st_nlink = 2;
+        return 0;
+	}
 
+	ScopedDbConnection sdc(gridfs_options.host);
     GridFS gf(sdc.conn(), gridfs_options.db);
     GridFile file = gf.findFile(path);
     sdc.done();
 
     if(!file.exists()) {
-		// HACK: Assumes that if the last part of the path has a '.' in it, it's the leaf of the path, and if we haven't found a match by now,
-		// give up and go home. This works just dandy as long as you avoid putting periods in your 'directory' names.
-		if(is_leaf(path)) {
-			return -ENOENT;
-		}
-        stbuf->st_mode = S_IFDIR | 0777;
-        stbuf->st_nlink = 2;
-        return 0;
+		return -ENOENT;
     }
 
     stbuf->st_mode = S_IFREG | 0555;
