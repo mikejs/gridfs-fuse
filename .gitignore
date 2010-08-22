@@ -1,8 +1,4 @@
-
-.sconf_temp/
-.sconsign.dblite
-config.log
-
 *.o
+*.a
 
 mount-gridfs
