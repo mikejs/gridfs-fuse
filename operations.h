@@ -18,6 +18,7 @@
 #ifndef __OPERATIONS_H
 #define __OPERATIONS_H
 
+#define _FILE_OFFSET_BITS 64
 #define FUSE_USE_VERSION 26
 
 #include <fuse.h>

@@ -1,4 +1,4 @@
 *.o
 *.a
 
-mount-gridfs
+mount_gridfs

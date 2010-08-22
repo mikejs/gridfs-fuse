@@ -18,7 +18,7 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
 
         # wait for mount to complete
         time.sleep(1)
-            
+
     def tearDown(self):
         for filename in glob.iglob(os.path.join(self.mount, '*')):
             os.remove(filename)
@@ -29,11 +29,11 @@ class BasicGridfsFUSETestCase(unittest.TestCase):
             subprocess.check_call(['umount', self.mount])
 
         os.rmdir(self.mount)
-        
+
     def test_read_write(self):
         with open(os.path.join(self.mount, 'testfile.txt'), 'w') as w:
             w.write("This is a test of GridFS FUSE.")
-        
+
         with open(os.path.join(self.mount, 'testfile.txt'), 'r') as r:
             self.assertEqual("This is a test of GridFS FUSE.",
                              r.read())
