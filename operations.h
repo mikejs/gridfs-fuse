@@ -21,6 +21,11 @@
 #define _FILE_OFFSET_BITS 64
 #define FUSE_USE_VERSION 26
 
+// ENOATTR is not blessed by POSIX. Darwin uses 93.
+#ifndef ENOATTR
+#define ENOATTR 93
+#endif
+
 #include <fuse.h>
 
 int gridfs_getattr(const char *path, struct stat *stbuf);
