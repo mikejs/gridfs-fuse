@@ -39,7 +39,7 @@ int LocalGridFile::write(const char *buf, size_t nbyte, off_t offset)
 
     _length = max(_length, (int)offset + written);
     _dirty = true;
-    
+
     return written;
 }
 

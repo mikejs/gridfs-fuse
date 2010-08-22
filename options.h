@@ -22,8 +22,8 @@
 #include <cstddef>
 
 struct gridfs_options {
-    const char* host;
-    const char* db;
+  const char* host;
+  const char* db;
 };
 
 extern gridfs_options gridfs_options;
@@ -31,14 +31,14 @@ extern gridfs_options gridfs_options;
 #define GRIDFS_OPT_KEY(t, p, v) { t, offsetof(struct gridfs_options, p), v }
 
 enum {
-    KEY_VERSION,
-    KEY_HELP
+  KEY_VERSION,
+  KEY_HELP
 };
 
 extern struct fuse_opt gridfs_opts[];
 
 int gridfs_opt_proc(void* data, const char* arg, int key,
-                    struct fuse_args* outargs);
+          struct fuse_args* outargs);
 
 void print_help();
 #endif

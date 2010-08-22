@@ -25,7 +25,7 @@
 int gridfs_getattr(const char *path, struct stat *stbuf);
 
 int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-                   off_t offset, struct fuse_file_info *fi);
+           off_t offset, struct fuse_file_info *fi);
 
 int gridfs_open(const char *path, struct fuse_file_info *fi);
 
@@ -34,7 +34,7 @@ int gridfs_create(const char* path, mode_t mode, struct fuse_file_info* ffi);
 int gridfs_release(const char* path, struct fuse_file_info* ffi);
 
 int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
-                struct fuse_file_info *fi);
+        struct fuse_file_info *fi);
 
 int gridfs_unlink(const char* path);
 
@@ -43,10 +43,10 @@ int gridfs_listxattr(const char* path, char* list, size_t size);
 int gridfs_getxattr(const char* path, const char* name, char* value, size_t size);
 
 int gridfs_setxattr(const char* path, const char* name, const char* value,
-                    size_t size, int flags);
+          size_t size, int flags);
 
 int gridfs_write(const char* path, const char* buf, size_t nbyte,
-                 off_t offset, struct fuse_file_info* ffi);
+         off_t offset, struct fuse_file_info* ffi);
 
 int gridfs_flush(const char* path, struct fuse_file_info* ffi);
 
