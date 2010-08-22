@@ -24,7 +24,6 @@
 #include <cerrno>
 #include <fcntl.h>
 
-#include <mongo/client/dbclient.h>
 #include <mongo/client/gridfs.h>
 #include <mongo/client/connpool.h>
 
@@ -214,7 +213,7 @@ int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
     int chunk_num = offset / chunk_size;
 
     while(len < size && chunk_num < file.getNumChunks()) {
-        Chunk chunk = file.getChunk(chunk_num);
+        GridFSChunk chunk = file.getChunk(chunk_num);
         int to_read;
         int cl = chunk.len();
 
