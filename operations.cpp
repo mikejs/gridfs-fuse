@@ -26,6 +26,7 @@
 
 #include <mongo/client/gridfs.h>
 #include <mongo/client/connpool.h>
+#include <mongo/client/dbclient.h>
 
 #ifdef __linux__
 #include <sys/xattr.h>
@@ -102,6 +103,9 @@ int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   if(strcmp(path, "/") != 0)
     return -ENOENT;
 
+  /* Create string to hold last filename seen */
+  string lastFN;
+
   filler(buf, ".", NULL, 0);
   filler(buf, "..", NULL, 0);
 
@@ -111,7 +115,15 @@ int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   auto_ptr<DBClientCursor> cursor = gf.list();
   while(cursor->more()) {
     BSONObj f = cursor->next();
-    filler(buf, f.getStringField("filename") , NULL , 0);
+    
+    /* If this filename matches the last filename we've seen, *do not* add it to the buffer because it's a duplicate filename */ 
+    if(lastFN!=f.getStringField("filename")) {
+     filler(buf, f.getStringField("filename") , NULL , 0);
+    }
+    
+    /* Update lastFN with our cursor's current filename */
+    lastFN = f.getStringField("filename");
+    fprintf(stderr, "DEBUG: %s\n", lastFN.c_str()); 
   }
   sdc.done();
 
