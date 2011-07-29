@@ -24,6 +24,8 @@
 struct gridfs_options {
   const char* host;
   const char* db;
+  const char* username;
+  const char* password;
 };
 
 extern gridfs_options gridfs_options;

@@ -54,6 +54,12 @@ int main(int argc, char *argv[])
   if(!gridfs_options.db) {
     gridfs_options.db = "test";
   }
+  if(!gridfs_options.username) {
+    gridfs_options.username = "test";
+  }
+  if(!gridfs_options.password) {
+    gridfs_options.password = "test";
+  }
 
   return fuse_main(args.argc, args.argv, &gridfs_oper, NULL);
 }

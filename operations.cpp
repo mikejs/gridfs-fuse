@@ -100,6 +100,11 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
 int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
            off_t offset, struct fuse_file_info *fi)
 {
+  string db = "fs";
+  string user = gridfs_options.username;
+  string pass = gridfs_options.password;
+  string err = "";
+  bool digest = true;
   if(strcmp(path, "/") != 0)
     return -ENOENT;
 
@@ -110,6 +115,8 @@ int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   filler(buf, "..", NULL, 0);
 
   ScopedDbConnection sdc(gridfs_options.host);
+  sdc.conn().DBClientWithCommands::auth(db, user, pass, err, digest);
+  fprintf(stderr, "DEBUG: %s\n", err.c_str()); 
   GridFS gf(sdc.conn(), gridfs_options.db);
 
   auto_ptr<DBClientCursor> cursor = gf.list();
