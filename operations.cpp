@@ -71,11 +71,11 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
 
   // HACK: Assumes that if the last part of the path has a '.' in it, it's the leaf of the path, and if we haven't found a match by now,
   // give up and go home. This works just dandy as long as you avoid putting periods in your 'directory' names.
-  if(!is_leaf(path)) {
+  /*if(!is_leaf(path)) {
     stbuf->st_mode = S_IFDIR | 0777;
     stbuf->st_nlink = 2;
     return 0;
-  }
+  }*/
 
   ScopedDbConnection sdc(gridfs_options.host);
   GridFS gf(sdc.conn(), gridfs_options.db);
@@ -440,4 +440,10 @@ int gridfs_rename(const char* old_path, const char* new_path)
   sdc.done();
 
   return 0;
+}
+
+int gridfs_mknod(const char *path, mode_t mode, dev_t rdev)
+{
+
+  fprintf(stderr, "MKNOD: %s\n", path); 
 }
