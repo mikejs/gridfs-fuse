@@ -78,7 +78,11 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
     return 0;
   }*/
 
-  ScopedDbConnection sdc(gridfs_options.host);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  bool digest = true;
+  string err = "";
+  sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+  fprintf(stderr, "DEBUG: %s\n", err.c_str());
   GridFS gf(sdc.conn(), gridfs_options.db);
   GridFile file = gf.findFile(path);
   sdc.done();
@@ -98,14 +102,8 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
   return 0;
 }
 
-int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-           off_t offset, struct fuse_file_info *fi)
+int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
-  string db = "fs";
-  string user = gridfs_options.username;
-  string pass = gridfs_options.password;
-  string err = "";
-  bool digest = true;
   if(strcmp(path, "/") != 0)
     return -ENOENT;
 
@@ -114,12 +112,11 @@ int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
   filler(buf, ".", NULL, 0);
   filler(buf, "..", NULL, 0);
-
-  HostAndPort hap(gridfs_options.host, gridfs_options.port);
-  ConnectionString cs(hap);
-
-  ScopedDbConnection sdc(cs);
-  sdc.conn().DBClientWithCommands::auth(db, user, pass, err, digest);
+  
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  bool digest = true;
+  string err = ""; 
+  sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
   fprintf(stderr, "DEBUG: %s\n", err.c_str()); 
   GridFS gf(sdc.conn(), gridfs_options.db);
 
@@ -156,7 +153,11 @@ int gridfs_open(const char *path, struct fuse_file_info *fi)
       return 0;
     }
 
-    ScopedDbConnection sdc(gridfs_options.host);
+    ScopedDbConnection sdc(*gridfs_options.conn_string);
+    bool digest = true;
+    string err = "";
+    sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+    fprintf(stderr, "DEBUG: %s\n", err.c_str());
     GridFS gf(sdc.conn(), gridfs_options.db);
     GridFile file = gf.findFile(path);
     sdc.done();
@@ -202,7 +203,11 @@ int gridfs_release(const char* path, struct fuse_file_info* ffi)
 int gridfs_unlink(const char* path) {
   path = fuse_to_mongo_path(path);
 
-  ScopedDbConnection sdc(gridfs_options.host);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  bool digest = true;
+  string err = "";
+  sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+  fprintf(stderr, "DEBUG: %s\n", err.c_str());
   GridFS gf(sdc.conn(), gridfs_options.db);
   gf.removeFile(path);
   sdc.done();
@@ -223,7 +228,11 @@ int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
     return lgf->read(buf, size, offset);
   }
 
-  ScopedDbConnection sdc(gridfs_options.host);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  bool digest = true;
+  string err = "";
+  sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+  fprintf(stderr, "DEBUG: %s\n", err.c_str());
   GridFS gf(sdc.conn(), gridfs_options.db);
   GridFile file = gf.findFile(path);
 
@@ -266,7 +275,11 @@ int gridfs_listxattr(const char* path, char* list, size_t size)
     return 0;
   }
 
-  ScopedDbConnection sdc(gridfs_options.host);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  bool digest = true;
+  string err = "";
+  sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+  fprintf(stderr, "DEBUG: %s\n", err.c_str());
   GridFS gf(sdc.conn(), gridfs_options.db);
   GridFile file = gf.findFile(path);
   sdc.done();
@@ -314,7 +327,11 @@ int gridfs_getxattr(const char* path, const char* name, char* value, size_t size
     return -ENOATTR;
   }
 
-  ScopedDbConnection sdc(gridfs_options.host);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  bool digest = true;
+  string err = "";
+  sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+  fprintf(stderr, "DEBUG: %s\n", err.c_str());
   GridFS gf(sdc.conn(), gridfs_options.db);
   GridFile file = gf.findFile(path);
   sdc.done();
@@ -386,8 +403,11 @@ int gridfs_flush(const char* path, struct fuse_file_info *ffi)
     return 0;
   }
 
-  ScopedDbConnection sdc(gridfs_options.host);
-  DBClientBase &client = sdc.conn();
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  bool digest = true;
+  string err = "";
+  sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+  fprintf(stderr, "DEBUG: %s\n", err.c_str());
   GridFS gf(sdc.conn(), gridfs_options.db);
 
   if(gf.findFile(path).exists()) {
@@ -412,7 +432,11 @@ int gridfs_rename(const char* old_path, const char* new_path)
   old_path = fuse_to_mongo_path(old_path);
   new_path = fuse_to_mongo_path(new_path);
 
-  ScopedDbConnection sdc(gridfs_options.host);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  bool digest = true;
+  string err = "";
+  sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+  fprintf(stderr, "DEBUG: %s\n", err.c_str());
   DBClientBase &client = sdc.conn();
 
   string db_name = gridfs_options.db;

@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
   gridfs_oper.rename = gridfs_rename;
 
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+  mongo::ConnectionString cs;
 
   memset(&gridfs_options, 0, sizeof(struct gridfs_options));
   if(fuse_opt_parse(&args, &gridfs_options, gridfs_opts,
@@ -56,7 +57,8 @@ int main(int argc, char *argv[])
   if(!gridfs_options.port) {
     gridfs_options.port = 0;
   } else {
-    ConnectionString cs = ConnectionSring(mongo::HostAndPort::HostAndPort(gridfs_options.host, gridfs_options.port));
+    cs = mongo::ConnectionString(mongo::HostAndPort::HostAndPort(gridfs_options.host, gridfs_options.port));
+    gridfs_options.conn_string = &cs;
   }
   if(!gridfs_options.db) {
     gridfs_options.db = "test";
