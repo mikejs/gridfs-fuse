@@ -23,6 +23,7 @@
 
 struct gridfs_options {
   const char* host;
+  int port;
   const char* db;
   const char* username;
   const char* password;

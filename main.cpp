@@ -18,6 +18,8 @@
 #include "operations.h"
 #include "options.h"
 #include "utils.h"
+#include <mongo/util/hostandport.h>
+#include <mongo/client/dbclient.h>
 #include <cstring>
 
 using namespace std;
@@ -50,6 +52,11 @@ int main(int argc, char *argv[])
 
   if(!gridfs_options.host) {
     gridfs_options.host = "localhost";
+  }
+  if(!gridfs_options.port) {
+    gridfs_options.port = 0;
+  } else {
+    ConnectionString cs = ConnectionSring(mongo::HostAndPort::HostAndPort(gridfs_options.host, gridfs_options.port));
   }
   if(!gridfs_options.db) {
     gridfs_options.db = "test";

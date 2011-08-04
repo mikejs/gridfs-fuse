@@ -27,6 +27,7 @@
 #include <mongo/client/gridfs.h>
 #include <mongo/client/connpool.h>
 #include <mongo/client/dbclient.h>
+#include <mongo/util/hostandport.h>
 
 #ifdef __linux__
 #include <sys/xattr.h>
@@ -114,7 +115,10 @@ int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   filler(buf, ".", NULL, 0);
   filler(buf, "..", NULL, 0);
 
-  ScopedDbConnection sdc(gridfs_options.host);
+  HostAndPort hap(gridfs_options.host, gridfs_options.port);
+  ConnectionString cs(hap);
+
+  ScopedDbConnection sdc(cs);
   sdc.conn().DBClientWithCommands::auth(db, user, pass, err, digest);
   fprintf(stderr, "DEBUG: %s\n", err.c_str()); 
   GridFS gf(sdc.conn(), gridfs_options.db);
