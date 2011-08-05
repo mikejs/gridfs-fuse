@@ -24,6 +24,7 @@ Usage
 Current Limitations
 -------------------
 * Must specify all command-line arguments
+* Database username and password sent in cleartext
 * No directories
 * No permissions 
 * File creation/writing very experimental
