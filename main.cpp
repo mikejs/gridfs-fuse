@@ -21,6 +21,9 @@
 #include <mongo/util/hostandport.h>
 #include <mongo/client/dbclient.h>
 #include <cstring>
+#include <stdio.h>
+#include <iostream>
+#include <string>
 
 using namespace std;
 
@@ -67,7 +70,11 @@ int main(int argc, char *argv[])
     gridfs_options.username = "test";
   }
   if(!gridfs_options.password) {
-    gridfs_options.password = "test";
+    cout << "Password:";
+    char buffer[255];
+    cin.getline(buffer, sizeof(buffer));
+    cout << buffer;
+    gridfs_options.password = buffer;
   }
 
   return fuse_main(args.argc, args.argv, &gridfs_oper, NULL);
