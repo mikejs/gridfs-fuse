@@ -66,15 +66,15 @@ int main(int argc, char *argv[])
   if(!gridfs_options.db) {
     gridfs_options.db = "test";
   }
-  if(!gridfs_options.username) {
-    gridfs_options.username = "test";
-  }
-  if(!gridfs_options.password) {
+  if(gridfs_options.username && !gridfs_options.password) {
     cout << "Password:";
     char buffer[255];
     cin.getline(buffer, sizeof(buffer));
     cout << buffer;
     gridfs_options.password = buffer;
+  }
+  if (!gridfs_options.prefix) {
+    gridfs_options.prefix = "fs";
   }
 
   return fuse_main(args.argc, args.argv, &gridfs_oper, NULL);

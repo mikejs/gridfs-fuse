@@ -27,6 +27,7 @@ struct gridfs_options {
   int port;
   mongo::ConnectionString* conn_string;
   const char* db;
+  const char* prefix;
   const char* username;
   const char* password;
 };
