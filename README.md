@@ -16,10 +16,17 @@ Building
 
     $ make
 
+* Note that if you are using a debian or Ubuntu install, it might be better to
+  use the MakefileDebian (copy this file over Makefile) instead of the default
+  Makefile.  You will need the following packages:
+
+  g++, libfuse-dev, mongodb-dev, libboost-system-dev, libboost-filesystem-dev,
+  libboost-thread-dev
+
 Usage
 -----
 
-    $ ./mount_gridfs --db=db_name --host=localhost --port=port --username=db_username --password=db_password mount_point
+    $ ./mount_gridfs --db=db_name --prefix=fs --host=localhost --port=port --username=db_username --password=db_password mount_point
 
 Current Limitations
 -------------------
