@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
   if(!gridfs_options.port) {
     gridfs_options.port = 0;
   } else {
-    cs = mongo::ConnectionString(mongo::HostAndPort::HostAndPort(gridfs_options.host, gridfs_options.port));
+    cs = mongo::ConnectionString(mongo::HostAndPort(gridfs_options.host, gridfs_options.port));
     gridfs_options.conn_string = &cs;
   }
   if(!gridfs_options.db) {
