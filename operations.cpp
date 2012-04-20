@@ -26,6 +26,8 @@
 
 #include <mongo/client/gridfs.h>
 #include <mongo/client/connpool.h>
+#include <mongo/client/dbclient.h>
+#include <mongo/util/hostandport.h>
 
 #ifdef __linux__
 #include <sys/xattr.h>
@@ -37,6 +39,15 @@ using namespace mongo;
 std::map<string, LocalGridFile*> open_files;
 
 unsigned int FH = 1;
+
+void ScopedDbConnection_init(ScopedDbConnection& sdc) {
+  bool digest = true;
+  string err = "";
+  if (gridfs_options.username) {
+    sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+    fprintf(stderr, "DEBUG: %s\n", err.c_str());
+  }
+}
 
 int gridfs_getattr(const char *path, struct stat *stbuf)
 {
@@ -70,14 +81,15 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
 
   // HACK: Assumes that if the last part of the path has a '.' in it, it's the leaf of the path, and if we haven't found a match by now,
   // give up and go home. This works just dandy as long as you avoid putting periods in your 'directory' names.
-  if(!is_leaf(path)) {
+  /*if(!is_leaf(path)) {
     stbuf->st_mode = S_IFDIR | 0777;
     stbuf->st_nlink = 2;
     return 0;
-  }
+  }*/
 
-  ScopedDbConnection sdc(gridfs_options.host);
-  GridFS gf(sdc.conn(), gridfs_options.db);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  ScopedDbConnection_init(sdc);
+  GridFS gf(sdc.conn(), gridfs_options.db, gridfs_options.prefix);
   GridFile file = gf.findFile(path);
   sdc.done();
 
@@ -96,22 +108,33 @@ int gridfs_getattr(const char *path, struct stat *stbuf)
   return 0;
 }
 
-int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-           off_t offset, struct fuse_file_info *fi)
+int gridfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
   if(strcmp(path, "/") != 0)
     return -ENOENT;
 
+  /* Create string to hold last filename seen */
+  string lastFN;
+
   filler(buf, ".", NULL, 0);
   filler(buf, "..", NULL, 0);
-
-  ScopedDbConnection sdc(gridfs_options.host);
-  GridFS gf(sdc.conn(), gridfs_options.db);
+  
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  ScopedDbConnection_init(sdc);
+  GridFS gf(sdc.conn(), gridfs_options.db, gridfs_options.prefix);
 
   auto_ptr<DBClientCursor> cursor = gf.list();
   while(cursor->more()) {
     BSONObj f = cursor->next();
-    filler(buf, f.getStringField("filename") , NULL , 0);
+    
+    /* If this filename matches the last filename we've seen, *do not* add it to the buffer because it's a duplicate filename */ 
+    if(lastFN!=f.getStringField("filename")) {
+     filler(buf, f.getStringField("filename") , NULL , 0);
+    }
+    
+    /* Update lastFN with our cursor's current filename */
+    lastFN = f.getStringField("filename");
+    fprintf(stderr, "DEBUG: %s\n", lastFN.c_str()); 
   }
   sdc.done();
 
@@ -133,8 +156,10 @@ int gridfs_open(const char *path, struct fuse_file_info *fi)
       return 0;
     }
 
-    ScopedDbConnection sdc(gridfs_options.host);
-    GridFS gf(sdc.conn(), gridfs_options.db);
+    ScopedDbConnection sdc(*gridfs_options.conn_string);
+    ScopedDbConnection_init(sdc);
+    GridFS gf(sdc.conn(), gridfs_options.db, gridfs_options.prefix);
+
     GridFile file = gf.findFile(path);
     sdc.done();
 
@@ -179,8 +204,10 @@ int gridfs_release(const char* path, struct fuse_file_info* ffi)
 int gridfs_unlink(const char* path) {
   path = fuse_to_mongo_path(path);
 
-  ScopedDbConnection sdc(gridfs_options.host);
-  GridFS gf(sdc.conn(), gridfs_options.db);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  ScopedDbConnection_init(sdc);
+  GridFS gf(sdc.conn(), gridfs_options.db, gridfs_options.prefix);
+
   gf.removeFile(path);
   sdc.done();
 
@@ -200,8 +227,9 @@ int gridfs_read(const char *path, char *buf, size_t size, off_t offset,
     return lgf->read(buf, size, offset);
   }
 
-  ScopedDbConnection sdc(gridfs_options.host);
-  GridFS gf(sdc.conn(), gridfs_options.db);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  ScopedDbConnection_init(sdc);
+  GridFS gf(sdc.conn(), gridfs_options.db, gridfs_options.prefix);
   GridFile file = gf.findFile(path);
 
   if(!file.exists()) {
@@ -243,8 +271,9 @@ int gridfs_listxattr(const char* path, char* list, size_t size)
     return 0;
   }
 
-  ScopedDbConnection sdc(gridfs_options.host);
-  GridFS gf(sdc.conn(), gridfs_options.db);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  ScopedDbConnection_init(sdc);
+  GridFS gf(sdc.conn(), gridfs_options.db, gridfs_options.prefix);
   GridFile file = gf.findFile(path);
   sdc.done();
 
@@ -291,8 +320,9 @@ int gridfs_getxattr(const char* path, const char* name, char* value, size_t size
     return -ENOATTR;
   }
 
-  ScopedDbConnection sdc(gridfs_options.host);
-  GridFS gf(sdc.conn(), gridfs_options.db);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  ScopedDbConnection_init(sdc);
+  GridFS gf(sdc.conn(), gridfs_options.db, gridfs_options.prefix);
   GridFile file = gf.findFile(path);
   sdc.done();
 
@@ -363,9 +393,9 @@ int gridfs_flush(const char* path, struct fuse_file_info *ffi)
     return 0;
   }
 
-  ScopedDbConnection sdc(gridfs_options.host);
-  DBClientBase &client = sdc.conn();
-  GridFS gf(sdc.conn(), gridfs_options.db);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  ScopedDbConnection_init(sdc);
+  GridFS gf(sdc.conn(), gridfs_options.db, gridfs_options.prefix);
 
   if(gf.findFile(path).exists()) {
     gf.removeFile(path);
@@ -389,12 +419,18 @@ int gridfs_rename(const char* old_path, const char* new_path)
   old_path = fuse_to_mongo_path(old_path);
   new_path = fuse_to_mongo_path(new_path);
 
-  ScopedDbConnection sdc(gridfs_options.host);
+  ScopedDbConnection sdc(*gridfs_options.conn_string);
+  bool digest = true;
+  string err = "";
+  sdc.conn().DBClientWithCommands::auth(gridfs_options.db, gridfs_options.username, gridfs_options.password, err, digest);
+  fprintf(stderr, "DEBUG: %s\n", err.c_str());
   DBClientBase &client = sdc.conn();
 
   string db_name = gridfs_options.db;
+  db_name += ".";
+  db_name += gridfs_options.prefix;
 
-  BSONObj file_obj = client.findOne(db_name + ".fs.files",
+  BSONObj file_obj = client.findOne(db_name + ".files",
                     BSON("filename" << old_path));
 
   if(file_obj.isEmpty()) {
@@ -415,10 +451,16 @@ int gridfs_rename(const char* old_path, const char* new_path)
 
   b << "filename" << new_path;
 
-  client.update(db_name + ".fs.files",
+  client.update(db_name + ".files",
           BSON("_id" << file_obj.getField("_id")), b.obj());
 
   sdc.done();
 
   return 0;
+}
+
+int gridfs_mknod(const char *path, mode_t mode, dev_t rdev)
+{
+
+  fprintf(stderr, "MKNOD: %s\n", path); 
 }

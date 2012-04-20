@@ -25,7 +25,11 @@ struct gridfs_options gridfs_options;
 struct fuse_opt gridfs_opts[] =
 {
   GRIDFS_OPT_KEY("--host=%s", host, 0),
+  GRIDFS_OPT_KEY("--port=%d", port, 0),
   GRIDFS_OPT_KEY("--db=%s", db, 0),
+  GRIDFS_OPT_KEY("--prefix=%s", prefix, 0),
+  GRIDFS_OPT_KEY("--username=%s", username, 0),
+  GRIDFS_OPT_KEY("--password=%s", password, 0),
   FUSE_OPT_KEY("-v", KEY_VERSION),
   FUSE_OPT_KEY("--version", KEY_VERSION),
   FUSE_OPT_KEY("-h", KEY_HELP),
@@ -53,8 +57,12 @@ void print_help()
 {
   cout << "usage: ./mount_gridfs [options] mountpoint" << endl;
   cout << endl << "general options:" << endl;
-  cout << "\t--db=[dbname]\t\twhich mongo database to use" << endl;
   cout << "\t--host=[hostname]\thostname of your mongodb server" << endl;
+  cout << "\t--port=[port]\tport of your mongodb server" << endl;
+  cout << "\t--db=[dbname]\t\twhich mongo database to use" << endl;
+  cout << "\t--prefix=[prefix]\tprefix of your gridFS" << endl;
+  cout << "\t--username=[username]\tusername of your mongodb server" << endl;
+  cout << "\t--password=[password]\tpassword of your mongodb server" << endl;
   cout << "\t-h, --help\t\tprint help" << endl;
   cout << "\t-v, --version\t\tprint version" << endl;
   cout << endl << "FUSE options: " << endl;

@@ -19,11 +19,17 @@
 #define __OPTIONS_H
 
 #include <fuse/fuse_opt.h>
+#include <mongo/client/dbclient.h>
 #include <cstddef>
 
 struct gridfs_options {
   const char* host;
+  int port;
+  mongo::ConnectionString* conn_string;
   const char* db;
+  const char* prefix;
+  const char* username;
+  const char* password;
 };
 
 extern gridfs_options gridfs_options;

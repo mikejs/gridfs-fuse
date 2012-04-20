@@ -18,7 +18,12 @@
 #include "operations.h"
 #include "options.h"
 #include "utils.h"
+#include <mongo/util/hostandport.h>
+#include <mongo/client/dbclient.h>
 #include <cstring>
+#include <stdio.h>
+#include <iostream>
+#include <string>
 
 using namespace std;
 
@@ -40,6 +45,7 @@ int main(int argc, char *argv[])
   gridfs_oper.rename = gridfs_rename;
 
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+  mongo::ConnectionString cs;
 
   memset(&gridfs_options, 0, sizeof(struct gridfs_options));
   if(fuse_opt_parse(&args, &gridfs_options, gridfs_opts,
@@ -51,8 +57,24 @@ int main(int argc, char *argv[])
   if(!gridfs_options.host) {
     gridfs_options.host = "localhost";
   }
+  if(!gridfs_options.port) {
+    gridfs_options.port = 0;
+  } else {
+    cs = mongo::ConnectionString(mongo::HostAndPort(gridfs_options.host, gridfs_options.port));
+    gridfs_options.conn_string = &cs;
+  }
   if(!gridfs_options.db) {
     gridfs_options.db = "test";
+  }
+  if(gridfs_options.username && !gridfs_options.password) {
+    cout << "Password:";
+    char buffer[255];
+    cin.getline(buffer, sizeof(buffer));
+    cout << buffer;
+    gridfs_options.password = buffer;
+  }
+  if (!gridfs_options.prefix) {
+    gridfs_options.prefix = "fs";
   }
 
   return fuse_main(args.argc, args.argv, &gridfs_oper, NULL);
