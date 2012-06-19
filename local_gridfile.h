@@ -5,6 +5,10 @@
 #include <cstring>
 #include <iostream>
 
+#ifdef __linux__
+  #include "sys/types.h"
+#endif
+
 const unsigned int DEFAULT_CHUNK_SIZE = 256 * 1024;
 
 class LocalGridFile {
